@@ -7,24 +7,52 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart' as http_test;
 
 import 'package:fun_cat_responses/main.dart';
+import 'package:network_image_mock/network_image_mock.dart';
+
+Future<http.Response> _mockResponse(http.Request req) async {
+  switch (req.url.toString()) {
+    case 'https://google.com':
+      return http.Response('Success', 200);
+    default:
+      return http.Response('Error: not found', 404);
+  }
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+  setUp(() {
+    CatsAPI.instance.setClient(http_test.MockClient(_mockResponse));
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  group('$CatsAPI', () {
+    test('200 response', () async {
+      final res = await CatsAPI.instance.checkStatusCode('google.com');
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+      expect(res, '200');
+    });
+    test('404 response', () async {
+      final res = await CatsAPI.instance.checkStatusCode('none.com');
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      expect(res, '404');
+    });
+  });
+  group('$Home', () {
+    testWidgets('200 shows cat image', (WidgetTester tester) async {
+      await mockNetworkImagesFor(() async {
+        await tester.pumpWidget(MyApp());
+
+        await tester.enterText(find.byType(TextField), 'google.com');
+
+        await tester.pump();
+
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(ValueKey('cat')), findsOneWidget);
+      });
+    });
   });
 }
