@@ -1,0 +1,23 @@
+name: analyze & test cat example
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  analyze:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2.3.4
+      - uses: subosito/flutter-action@v1
+        with:
+          channel: 'stable'
+
+      - name: 'Analyze'
+        run: flutter pub get && flutter analyze .
+
+      - name: 'Format'
+        run: flutter format lib/** --set-exit-if-changed
+
+      - name: 'Run tests'
+        run: flutter test -r expanded
